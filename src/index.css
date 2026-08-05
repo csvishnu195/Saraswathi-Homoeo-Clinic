@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #F7F3EA;
+  --paper: #FFFEFB;
+  --forest: #223321;
+  --forest-2: #2E4429;
+  --sage: #5C7A52;
+  --sage-light: #8FA885;
+  --gold: #C69A4A;
+  --gold-light: #E4C888;
+  --text: #24291F;
+  --text-muted: #5B6155;
+  --line: #DCD5C4;
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Work Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+::selection { background: var(--gold-light); color: var(--forest); }
+
+/* Signature botanical sprig divider - the page's recurring motif */
+.sprig {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.leaf-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.leaf-rule::before, .leaf-rule::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
