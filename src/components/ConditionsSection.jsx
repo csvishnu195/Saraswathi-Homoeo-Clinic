@@ -4,7 +4,7 @@ import {
 import Sprig from "./Sprig";
 
 const CONDITIONS = [
-  { label: "Neurological", icon: TbBrain, items: ["Migraine"] },
+  { label: "Neurological", icon: TbBrain, items: ["Migraine", "Headache"] },
   { label: "Respiratory & ENT", icon: TbLungs, items: ["Allergy", "Sinusitis", "Bronchitis", "Asthma", "Nasal polyps"] },
   { label: "Hormonal & Metabolic", icon: TbActivity, items: ["Thyroid problem", "PCOD", "PCOS"] },
   { label: "Digestive", icon: TbApple, items: ["Acidity", "GERD", "Liver disease", "Gall stone", "Celiac disease"] },
