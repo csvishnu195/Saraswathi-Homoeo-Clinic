@@ -1,8 +1,8 @@
 import DoctorHero from "../components/DoctorHero";
+import ConditionsSection from "../components/ConditionsSection";
 import BookingCalendar from "../components/BookingCalendar";
 import ReviewsSection from "../components/ReviewsSection";
 import Sprig from "../components/Sprig";
-import ConditionsSection from "../components/ConditionsSection";
 
 const STEPS = [
   { title: "Pick a slot", body: "Browse Dr Kumar's open times on the clinic calendar." },
@@ -14,6 +14,7 @@ export default function Home() {
   return (
     <>
       <DoctorHero />
+
       <ConditionsSection />
 
       <section className="mx-auto max-w-6xl px-5 py-14">
