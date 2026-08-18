@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ADMIN_EMAIL } from "../lib/firebase";
 import Sprig from "../components/Sprig";
 
 export default function AdminLogin() {
   const { loginAdmin, registerAdminFirstTime, resetPassword } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState(ADMIN_EMAIL);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [resetStatus, setResetStatus] = useState("");
