@@ -8,7 +8,7 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db, ADMIN_EMAIL } from "../lib/firebase";
+import { auth, db, isAdminEmail } from "../lib/firebase";
 
 const AuthContext = createContext(null);
 
@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
   }
 
   async function loginAdmin({ email, password }) {
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (!isAdminEmail(email)) {
       throw new Error("This email is not authorized for admin access.");
     }
     const cred = await signInWithEmailAndPassword(auth, email, password);
@@ -80,7 +80,7 @@ export function AuthProvider({ children }) {
   }
 
   async function registerAdminFirstTime({ email, password }) {
-    if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    if (!isAdminEmail(email)) {
       throw new Error("This email is not authorized for admin access.");
     }
     const cred = await createUserWithEmailAndPassword(auth, email, password);
