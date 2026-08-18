@@ -53,13 +53,12 @@ export default function DoctorHero() {
           className="w-72 h-80 sm:w-80 sm:h-96 rounded-[2rem] overflow-hidden border-4 flex items-center justify-center"
           style={{ borderColor: "var(--paper)", background: "var(--sage-light)" }}
         >
-          {!imgFailed ? (
-            <img
-              src="/doctor-photo.jpg"
-              alt="Dr Sachin Kumar, BHMS"
-              className="w-full h-full object-cover"
-              onError={() => setImgFailed(true)}
-            />
+          <img
+  src="/doctor-photo.jpg"
+  alt="Dr Sachin Kumar, BHMS"
+  className="w-full h-full object-cover"
+  onError={() => setImgFailed(true)}
+/>
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center px-6">
               <Sprig className="w-10 h-10" color="var(--paper)" />
