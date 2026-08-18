@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db, ADMIN_EMAIL } from "../lib/firebase";
@@ -98,6 +99,11 @@ export function AuthProvider({ children }) {
     await signOut(auth);
   }
 
+  async function resetPassword(email) {
+    if (!email) throw new Error("Enter your email address first.");
+    await sendPasswordResetEmail(auth, email);
+  }
+
   const value = {
     user,
     profile,
@@ -108,6 +114,7 @@ export function AuthProvider({ children }) {
     loginPatient,
     loginAdmin,
     registerAdminFirstTime,
+    resetPassword,
     logout,
   };
 
