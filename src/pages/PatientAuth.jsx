@@ -5,11 +5,12 @@ import Sprig from "../components/Sprig";
 
 export default function PatientAuth() {
   const [tab, setTab] = useState("login");
-  const { loginPatient, registerPatient } = useAuth();
+  const { loginPatient, registerPatient, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [error, setError] = useState("");
+  const [resetStatus, setResetStatus] = useState("");
   const [busy, setBusy] = useState(false);
 
   function update(field) {
@@ -19,6 +20,7 @@ export default function PatientAuth() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setResetStatus("");
     setBusy(true);
     try {
       if (tab === "login") {
@@ -28,6 +30,24 @@ export default function PatientAuth() {
         await registerPatient(form);
       }
       navigate("/dashboard");
+    } catch (err) {
+      setError(err.message.replace("Firebase: ", ""));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setError("");
+    setResetStatus("");
+    if (!form.email) {
+      setError("Enter your email above, then tap \"Forgot password?\" again.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await resetPassword(form.email);
+      setResetStatus("Password reset email sent. Check your inbox.");
     } catch (err) {
       setError(err.message.replace("Firebase: ", ""));
     } finally {
@@ -46,7 +66,7 @@ export default function PatientAuth() {
         {["login", "signup"].map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); setError(""); }}
+            onClick={() => { setTab(t); setError(""); setResetStatus(""); }}
             className="flex-1 py-2 rounded-full text-sm font-medium capitalize transition"
             style={{
               background: tab === t ? "var(--sage)" : "transparent",
@@ -68,7 +88,22 @@ export default function PatientAuth() {
         <Field label="Email" value={form.email} onChange={update("email")} required type="email" />
         <Field label="Password" value={form.password} onChange={update("password")} required type="password" minLength={6} />
 
+        {tab === "login" && (
+          <div className="text-right -mt-2">
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={busy}
+              className="text-xs font-medium underline"
+              style={{ color: "var(--sage)" }}
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
+
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {resetStatus && <p className="text-sm" style={{ color: "var(--sage)" }}>{resetStatus}</p>}
 
         <button
           type="submit"
