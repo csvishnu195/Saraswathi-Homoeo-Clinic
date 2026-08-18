@@ -5,17 +5,19 @@ import { ADMIN_EMAIL } from "../lib/firebase";
 import Sprig from "../components/Sprig";
 
 export default function AdminLogin() {
-  const { loginAdmin, registerAdminFirstTime } = useAuth();
+  const { loginAdmin, registerAdminFirstTime, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState(ADMIN_EMAIL);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [resetStatus, setResetStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [firstTime, setFirstTime] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    setResetStatus("");
     setBusy(true);
     try {
       if (firstTime) {
@@ -24,6 +26,24 @@ export default function AdminLogin() {
         await loginAdmin({ email, password });
       }
       navigate("/admin/dashboard");
+    } catch (err) {
+      setError(err.message.replace("Firebase: ", ""));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setError("");
+    setResetStatus("");
+    if (!email) {
+      setError("Enter your admin email above, then tap \"Forgot password?\" again.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await resetPassword(email);
+      setResetStatus("Password reset email sent. Check your inbox.");
     } catch (err) {
       setError(err.message.replace("Firebase: ", ""));
     } finally {
@@ -63,7 +83,22 @@ export default function AdminLogin() {
           />
         </label>
 
+        {!firstTime && (
+          <div className="text-right -mt-2">
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={busy}
+              className="text-xs font-medium underline"
+              style={{ color: "var(--forest)" }}
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
+
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {resetStatus && <p className="text-sm" style={{ color: "var(--sage)" }}>{resetStatus}</p>}
 
         <button
           type="submit"
@@ -76,7 +111,7 @@ export default function AdminLogin() {
 
         <button
           type="button"
-          onClick={() => setFirstTime((f) => !f)}
+          onClick={() => { setFirstTime((f) => !f); setError(""); setResetStatus(""); }}
           className="w-full text-xs text-center"
           style={{ color: "var(--text-muted)" }}
         >
