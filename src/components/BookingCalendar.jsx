@@ -4,7 +4,14 @@ import { db } from "../lib/firebase";
 import Sprig from "./Sprig";
 
 function toDateKey(d) {
-  return d.toISOString().slice(0, 10);
+  // Build the key from local date parts (not toISOString, which converts to
+  // UTC first and can shift the date by a day for timezones ahead of UTC,
+  // e.g. IST). This must match the plain "YYYY-MM-DD" string the admin's
+  // <input type="date"> saves in AdminDashboard.jsx.
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function buildUpcomingDays(count = 21) {
