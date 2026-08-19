@@ -1,18 +1,136 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 8, 24);
+
+    // ---- helpers ---------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // The emails allowed to hold the "admin" role. Keep this in sync with
+    // ADMIN_EMAILS in src/lib/firebase.js.
+    function isAllowedAdminEmail() {
+      return isSignedIn() &&
+        request.auth.token.email.lower() in
+          ["ssambaji9@gmail.com", "csvishnu195@gmail.com"];
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function userRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? userDoc(request.auth.uid).data.role
+        : null;
+    }
+
+    function isAdmin() {
+      return userRole() == "admin";
+    }
+
+    function isPatient() {
+      return userRole() == "patient";
+    }
+
+    // ---- users -------------------------------------------------------
+    // One profile doc per Firebase Auth user: { name, email, phone?, role, createdAt }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      // Created once by the owner right after sign-up/first admin sign-in.
+      // A "patient" role is always allowed; an "admin" role is only allowed
+      // for the whitelisted admin emails, so nobody can grant themselves
+      // admin access by calling Firestore directly.
+      allow create: if isOwner(userId) &&
+        (
+          request.resource.data.role == "patient" ||
+          (request.resource.data.role == "admin" && isAllowedAdminEmail())
+        );
+
+      // Owners may update their own profile, but never change their role.
+      allow update: if isOwner(userId) &&
+        request.resource.data.role == resource.data.role;
+
+      allow delete: if false;
+    }
+
+    // ---- appointments --------------------------------------------------
+    // { patientId, patientName, patientPhone, patientEmail, date, time,
+    //   reason, status, zoomLink, createdAt }
+
+    match /appointments/{appointmentId} {
+      // Admin sees/manages everything; a patient only ever sees their own
+      // appointments (matches the app's `where("patientId","==",uid)` query).
+      allow read: if isAdmin() ||
+        (isPatient() && resource.data.patientId == request.auth.uid);
+
+      // A patient can only book for themselves, starting out pending with
+      // no Zoom link yet.
+      allow create: if isPatient() &&
+        request.resource.data.patientId == request.auth.uid &&
+        request.resource.data.status == "pending" &&
+        request.resource.data.zoomLink == "";
+
+      // Only the clinic updates status / adds the Zoom link.
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---- availability ---------------------------------------------------
+    // /availability/{dateKey} => { slots: [{ time, booked }, ...] }
+
+    match /availability/{dateKey} {
+      function isValidSlotBooking() {
+        let before = resource.data.slots;
+        let after = request.resource.data.slots;
+        let removed = before.removeAll(after);
+        let added = after.removeAll(before);
+        return isPatient() &&
+          before.size() == after.size() &&
+          removed.size() == 1 &&
+          added.size() == 1 &&
+          removed[0].time == added[0].time &&
+          removed[0].booked == false &&
+          added[0].booked == true;
+      }
+
+      // Public: the homepage preview calendar reads this with no login.
+      allow read: if true;
+
+      // Only the clinic opens/removes time slots.
+      allow create, delete: if isAdmin();
+
+      // The clinic can change anything. A signed-in patient may only flip
+      // exactly one slot from unbooked to booked (their booking write) —
+      // they can't add/remove slots or un-book someone else's slot.
+      allow update: if isAdmin() || isValidSlotBooking();
+    }
+
+    // ---- reviews ---------------------------------------------------------
+    // { rating, comment, patientName, patientId, createdAt }
+
+    match /reviews/{reviewId} {
+      // Public: shown on the homepage for every visitor.
+      allow read: if true;
+
+      // Only a signed-in patient can post, and only as themselves.
+      allow create: if isPatient() &&
+        request.resource.data.patientId == request.auth.uid &&
+        request.resource.data.rating is number &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+
+      allow update: if false;
+      allow delete: if isAdmin();
     }
   }
 }
