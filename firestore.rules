@@ -65,7 +65,7 @@ service cloud.firestore {
 
     // ---- appointments --------------------------------------------------
     // { patientId, patientName, patientPhone, patientEmail, date, time,
-    //   reason, status, zoomLink, createdAt }
+    //   reason, status, zoomLink, prescription, createdAt }
 
     match /appointments/{appointmentId} {
       // Admin sees/manages everything; a patient only ever sees their own
@@ -80,8 +80,24 @@ service cloud.firestore {
         request.resource.data.status == "pending" &&
         request.resource.data.zoomLink == "";
 
-      // Only the clinic updates status / adds the Zoom link.
-      allow update: if isAdmin();
+      // The clinic can change anything (status, Zoom link, prescription…).
+      // A patient may only act on their own still-open appointment, and
+      // only in one of two shapes:
+      //   - Cancel: flip status to "cancelled", nothing else changes.
+      //   - Reschedule: change date/time, reset to "pending" with the Zoom
+      //     link cleared (the clinic re-confirms the new slot).
+      allow update: if isAdmin() ||
+        (isPatient() &&
+          resource.data.patientId == request.auth.uid &&
+          resource.data.status in ["pending", "confirmed"] &&
+          (
+            (request.resource.data.status == "cancelled" &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])) ||
+            (request.resource.data.status == "pending" &&
+              request.resource.data.zoomLink == "" &&
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(["date", "time", "status", "zoomLink"]))
+          )
+        );
       allow delete: if isAdmin();
     }
 
@@ -103,6 +119,25 @@ service cloud.firestore {
           added[0].booked == true;
       }
 
+      // The reverse of a booking: flips exactly one slot from booked back to
+      // open, used when a patient cancels or reschedules their own
+      // appointment. (Ownership of the underlying appointment is enforced
+      // separately by the /appointments update rule; this only constrains
+      // the shape of the availability write itself.)
+      function isValidSlotCancel() {
+        let before = resource.data.slots;
+        let after = request.resource.data.slots;
+        let removed = before.removeAll(after);
+        let added = after.removeAll(before);
+        return isPatient() &&
+          before.size() == after.size() &&
+          removed.size() == 1 &&
+          added.size() == 1 &&
+          removed[0].time == added[0].time &&
+          removed[0].booked == true &&
+          added[0].booked == false;
+      }
+
       // Public: the homepage preview calendar reads this with no login.
       allow read: if true;
 
@@ -110,9 +145,10 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
 
       // The clinic can change anything. A signed-in patient may only flip
-      // exactly one slot from unbooked to booked (their booking write) —
-      // they can't add/remove slots or un-book someone else's slot.
-      allow update: if isAdmin() || isValidSlotBooking();
+      // exactly one slot from unbooked to booked (their booking write) or
+      // booked back to unbooked (their own cancel/reschedule write) — they
+      // can't add/remove slots or otherwise touch someone else's slot.
+      allow update: if isAdmin() || isValidSlotBooking() || isValidSlotCancel();
     }
 
     // ---- reviews ---------------------------------------------------------
