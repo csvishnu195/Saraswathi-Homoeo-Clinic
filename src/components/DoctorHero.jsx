@@ -1,9 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 import Sprig from "./Sprig";
+
+const DEFAULT_PHOTO = "/doctor-photo.jpg";
 
 export default function DoctorHero() {
   const [imgFailed, setImgFailed] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(DEFAULT_PHOTO);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDoc(doc(db, "settings", "site"))
+      .then((snap) => {
+        if (cancelled) return;
+        const url = snap.exists() ? snap.data().doctorPhotoUrl : "";
+        if (url) setPhotoUrl(url);
+      })
+      .catch(() => {
+        // Public read failing just means we keep the bundled default photo.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section className="mx-auto max-w-6xl px-5 pt-14 pb-10 grid gap-10 md:grid-cols-[1.1fr_0.9fr] items-center">
@@ -55,10 +76,18 @@ export default function DoctorHero() {
         >
           {!imgFailed ? (
             <img
-              src="/doctor-photo.jpg"
+              src={photoUrl}
               alt="Dr Sachin Kumar, BHMS"
               className="w-full h-full object-cover"
-              onError={() => setImgFailed(true)}
+              onError={() => {
+                // If a custom uploaded photo fails to load, fall back to the
+                // bundled default once before showing the placeholder.
+                if (photoUrl !== DEFAULT_PHOTO) {
+                  setPhotoUrl(DEFAULT_PHOTO);
+                } else {
+                  setImgFailed(true);
+                }
+              }}
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center px-6">

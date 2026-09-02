@@ -151,6 +151,16 @@ service cloud.firestore {
       allow update: if isAdmin() || isValidSlotBooking() || isValidSlotCancel();
     }
 
+    // ---- settings ---------------------------------------------------------
+    // /settings/site     => { doctorPhotoUrl }
+    // /settings/schedule => { weekly: { "0".."6": {open,start,end} }, slotMinutes, lastGeneratedDate }
+
+    match /settings/{docId} {
+      // Public: the homepage reads the doctor photo with no login.
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // ---- reviews ---------------------------------------------------------
     // { rating, comment, patientName, patientId, createdAt }
 
